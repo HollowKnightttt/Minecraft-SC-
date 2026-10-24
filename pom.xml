@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example.bedrock</groupId>
+  <artifactId>bedrock-server-cpp</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <!-- 'pom' = Maven hanya jadi orkestrator; kompilasi dikerjakan CMake + g++/clang -->
+  <packaging>pom</packaging>
+  <name>Bedrock Server (C++)</name>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <cmake.executable>cmake</cmake.executable>
+    <ctest.executable>ctest</ctest.executable>
+    <cmake.build.type>Release</cmake.build.type>
+    <cmake.build.dir>${project.build.directory}/cmake</cmake.build.dir>
+    <server.run.dir>${project.build.directory}/run</server.run.dir>
+    <server.port>19132</server.port>
+    <server.motd>C++ Bedrock Server</server.motd>
+    <skipTests>false</skipTests>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+
+          <!-- 1) Konfigurasi CMake: mvn generate-sources / compile -->
+          <execution>
+            <id>cmake-configure</id>
+            <phase>generate-sources</phase>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+              <executable>${cmake.executable}</executable>
+              <arguments>
+                <argument>-S</argument><argument>${project.basedir}</argument>
+                <argument>-B</argument><argument>${cmake.build.dir}</argument>
+                <argument>-DCMAKE_BUILD_TYPE=${cmake.build.type}</argument>
+                <argument>-DSERVER_VERSION=${project.version}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+
+          <!-- 2) Kompilasi C++ (server + test): mvn compile -->
+          <execution>
+            <id>cmake-build</id>
+            <phase>compile</phase>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+              <executable>${cmake.executable}</executable>
+              <arguments>
+                <argument>--build</argument><argument>${cmake.build.dir}</argument>
+                <argument>--parallel</argument>
+              </arguments>
+            </configuration>
+          </execution>
+
+          <!-- 3) Unit test: mvn test  (lewati dengan -DskipTests) -->
+          <execution>
+            <id>ctest</id>
+            <phase>test</phase>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+              <skip>${skipTests}</skip>
+              <executable>${ctest.executable}</executable>
+              <arguments>
+                <argument>--test-dir</argument><argument>${cmake.build.dir}</argument>
+                <argument>--output-on-failure</argument>
+              </arguments>
+            </configuration>
+          </execution>
+
+          <!-- 4) Jalankan server: mvn exec:exec@run-server (tidak terikat lifecycle) -->
+          <execution>
+            <id>run-server</id>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+              <executable>${cmake.build.dir}/bedrock-server</executable>
+              <workingDirectory>${server.run.dir}</workingDirectory>
+              <arguments>
+                <argument>--port</argument><argument>${server.port}</argument>
+                <argument>--motd</argument><argument>${server.motd}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
